@@ -27,8 +27,8 @@ fi
 # Configurer Nginx comme reverse proxy
 cat >/etc/nginx/sites-available/n8n <<EOF
 server {
-    listen 80;
-    server_name _;
+  listen 80 default_server;
+  server_name n8nallanlny.freeddns.org _;
 
     location / {
         proxy_pass http://localhost:5678;
