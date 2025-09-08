@@ -18,6 +18,12 @@ docker run -d \
   -v n8n_data:/home/node/.n8n \
   n8nio/n8n
 
+# Vérifier que Nginx est bien installé
+if [ ! -d /etc/nginx/sites-available ]; then
+  echo "Nginx n'est pas installé ou le dossier sites-available est absent"
+  exit 1
+fi
+
 # Configurer Nginx comme reverse proxy
 cat >/etc/nginx/sites-available/n8n <<EOF
 server {
