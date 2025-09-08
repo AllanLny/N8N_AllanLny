@@ -1,9 +1,13 @@
-# Active automatiquement l'API Compute Engine
-resource "google_project_service" "compute" {
+resource "google_project_service" "cloudresourcemanager" {
   project = var.project_id
-  service = "compute.googleapis.com"
+  service = "cloudresourcemanager.googleapis.com"
 }
-# main.tf - Déploiement d'une VM GCP Free Tier avec Docker et n8n
+
+resource "google_project_service" "compute" {
+  project    = var.project_id
+  service    = "compute.googleapis.com"
+  depends_on = [google_project_service.cloudresourcemanager]
+}
 
 provider "google" {
   project = var.project_id
