@@ -1,0 +1,142 @@
+{
+  "name": "LinkedIn AutoPost DevOps Cloud",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "schedule",
+        "cronExpression": "0 8 * * *"
+      },
+      "id": "1",
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "owner": "AllanLny",
+        "resource": "repository",
+        "operation": "getAll",
+        "returnAll": true
+      },
+      "id": "2",
+      "name": "GitHub Repos",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [400, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=cloud+devops+gcp&hl=fr&gl=FR&ceid=FR:fr"
+      },
+      "id": "3",
+      "name": "RSS News",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+      "functionCode": "const repo = items[0].json.name;\nconst news = items[1].json.title;\nconst prompt = `Tu es un expert DevOps/Cloud/GCP/Full Stack.\\nRédige un post LinkedIn en français qui :\\n\\n1. Commence par une accroche forte et inspirante.\\n2. Analyse mes repositories GitHub : ${repo}.\\n3. Relie si possible avec un projet à l'actualité suivante : ${news}.\\n4. Montre mon expertise (DevOps, Cloud, GCP, Full Stack) sans être trop auto-centré.\\n5. Reste clair, accessible et engageant.\\n6. Termine par une question ou un appel à l’action pour encourager les échanges.\\n7. Ajoute une liste pertinente de hashtags LinkedIn (au moins 5, max 10).\\n\\nStyle attendu : professionnel, inspirant, humain, pas trop formel. (Adapte toi a ma facon d'ecrire sur notion pour capter la vibe de mon ecriture)`;\nreturn [{ json: { prompt } }];"
+      },
+      "id": "4",
+      "name": "Préparer Prompt IA",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+  "requestMethod": "POST",
+  "url": "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+  "jsonParameters": true,
+  "options": {},
+  "bodyParametersJson": "{\n  \"inputs\": \"{{$json[\"prompt\"]}}\n}",
+  "headerParametersJson": "{\n  \"Authorization\": \"Bearer {{$env[\"hf_token\"]}}\"\n}"
+      },
+      "id": "5",
+      "name": "Hugging Face IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "create",
+        "databaseId": "{{$env['notion_db_id']}}",
+        "properties": {
+          "Titre": "={{$json['prompt']}}",
+          "Post": "={{$json['generated_text']}}"
+        }
+      },
+      "id": "6",
+      "name": "Notion Save",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "GitHub Repos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Repos": {
+      "main": [
+        [
+          {
+            "node": "Préparer Prompt IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS News": {
+      "main": [
+        [
+          {
+            "node": "Préparer Prompt IA",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Préparer Prompt IA": {
+      "main": [
+        [
+          {
+            "node": "Hugging Face IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hugging Face IA": {
+      "main": [
+        [
+          {
+            "node": "Notion Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

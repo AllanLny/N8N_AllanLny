@@ -1,0 +1,62 @@
+name: Deploy N8N on GCP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    name: 'Terraform Apply'
+    runs-on: ubuntu-latest
+
+    env:
+      GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Import VM if exists
+        run: |
+          set +e
+          ZONE=$(grep zone terraform.tfvars | cut -d'"' -f2)
+          gcloud compute instances describe n8n-vm --zone=$ZONE --project=${{ secrets.GCP_PROJECT_ID }}
+          if [ $? -eq 0 ]; then
+            terraform import google_compute_instance.n8n_vm n8n-vm --zone=$ZONE || true
+          fi
+          set -e
+
+      - name: Import Firewall if exists
+        run: |
+          set +e
+          gcloud compute firewall-rules describe n8n-allow-http --project=${{ secrets.GCP_PROJECT_ID }}
+          if [ $? -eq 0 ]; then
+            terraform import google_compute_firewall.n8n_fw n8n-allow-http || true
+          fi
+          set -e
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
