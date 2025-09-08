@@ -1,3 +1,8 @@
+# Active automatiquement l'API Compute Engine
+resource "google_project_service" "compute" {
+  project = var.project_id
+  service = "compute.googleapis.com"
+}
 # main.tf - Déploiement d'une VM GCP Free Tier avec Docker et n8n
 
 provider "google" {
@@ -7,6 +12,7 @@ provider "google" {
 }
 
 resource "google_compute_instance" "n8n_vm" {
+  depends_on   = [google_project_service.compute]
   name         = "n8n-vm"
   machine_type = "e2-micro"
   zone         = var.zone
@@ -30,6 +36,7 @@ resource "google_compute_instance" "n8n_vm" {
 }
 
 resource "google_compute_firewall" "n8n_fw" {
+  depends_on = [google_project_service.compute]
   name    = "n8n-allow-http"
   network = "default"
 
