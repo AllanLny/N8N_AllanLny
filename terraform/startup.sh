@@ -1,36 +1,45 @@
+
 #!/bin/bash
 # filepath: terraform/startup.sh
 
-# Met à jour le système et installe Docker & Nginx
-apt-get update -y && apt-get install -y docker.io nginx
+# Active le mode debug et redirige toute la sortie vers un log
+set -x
+exec > >(tee -a /var/log/startup-script.log) 2>&1
 
-# Active et démarre Docker
+echo "[startup] Début du script"
+
+echo "[startup] Mise à jour du système et installation de Docker & Nginx"
+apt-get update -y && apt-get install -y docker.io nginx
+echo "[startup] Fin installation paquets"
+
+echo "[startup] Activation et démarrage de Docker"
 systemctl start docker
 systemctl enable docker
 
-# Crée un volume Docker persistant pour n8n
+echo "[startup] Création du volume Docker n8n_data"
 docker volume create n8n_data
 
-# Arrête et supprime tout ancien conteneur n8n s'il existe
+echo "[startup] Arrêt et suppression d'un ancien conteneur n8n si existant"
 if [ "$(docker ps -aq -f name=n8n)" ]; then
   docker stop n8n || true
   docker rm n8n || true
 fi
 
-# Lance n8n (port 5678, données persistantes)
+echo "[startup] Lancement du conteneur n8n"
 docker run -d \
   --name n8n \
   -p 5678:5678 \
   -v n8n_data:/home/node/.n8n \
   n8nio/n8n
+echo "[startup] Fin lancement n8n"
 
-# Vérifie que Nginx est bien installé
+echo "[startup] Vérification de l'installation de Nginx"
 if [ ! -d /etc/nginx/sites-available ]; then
   echo "Nginx n'est pas installé ou le dossier sites-available est absent"
   exit 1
 fi
 
-# Configure Nginx comme reverse proxy pour n8n
+echo "[startup] Configuration de Nginx comme reverse proxy pour n8n"
 cat >/etc/nginx/sites-available/n8n <<EOF
 server {
     listen 80 default_server;
@@ -46,17 +55,17 @@ server {
 }
 EOF
 
-# Active la config n8n et désactive le site par défaut
+echo "[startup] Activation de la config n8n et désactivation du site par défaut"
 ln -sf /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/n8n
 rm -f /etc/nginx/sites-enabled/default
 
-# Teste la config Nginx et redémarre
+echo "[startup] Test de la config Nginx et redémarrage"
 nginx -t && systemctl restart nginx
 
-# Affiche l'état des services pour debug
+echo "[startup] Statut des services pour debug"
 systemctl status docker --no-pager
 systemctl status nginx --no-pager
 
-echo "Installation et configuration terminées. n8n est accessible via Nginx."
+echo "[startup] Installation et configuration terminées. n8n est accessible via Nginx."
 
 echo "Contenu du script" > /root/startup.sh
