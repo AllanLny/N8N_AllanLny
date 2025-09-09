@@ -16,6 +16,17 @@ echo "[startup] Activation et démarrage de Docker"
 systemctl start docker
 systemctl enable docker
 
+# Attente active que Docker soit prêt
+echo "[startup] Attente que Docker soit prêt..."
+for i in {1..20}; do
+  if docker info > /dev/null 2>&1; then
+    echo "[startup] Docker est prêt."
+    break
+  fi
+  echo "[startup] Docker pas encore prêt, attente... ($i)"
+  sleep 3
+done
+
 echo "[startup] Création du volume Docker n8n_data"
 docker volume create n8n_data
 
@@ -29,6 +40,7 @@ done
 echo "[startup] Lancement du conteneur n8n"
 if docker run -d \
   --name n8n \
+  --restart unless-stopped \
   -p 5678:5678 \
   -v n8n_data:/home/node/.n8n \
   n8nio/n8n
