@@ -19,19 +19,25 @@ systemctl enable docker
 echo "[startup] Création du volume Docker n8n_data"
 docker volume create n8n_data
 
-echo "[startup] Arrêt et suppression d'un ancien conteneur n8n si existant"
-if [ "$(docker ps -aq -f name=n8n)" ]; then
-  docker stop n8n || true
-  docker rm n8n || true
-fi
+
+echo "[startup] Suppression de tous les conteneurs n8n existants (même stoppés ou en erreur)"
+for cid in $(docker ps -a -q --filter name=^/n8n$); do
+  echo "[startup] Suppression du conteneur $cid"
+  docker rm -f $cid || true
+done
 
 echo "[startup] Lancement du conteneur n8n"
-docker run -d \
+if docker run -d \
   --name n8n \
   -p 5678:5678 \
   -v n8n_data:/home/node/.n8n \
   n8nio/n8n
-echo "[startup] Fin lancement n8n"
+then
+  echo "[startup] Fin lancement n8n : OK"
+else
+  echo "[startup][ERREUR] Le lancement du conteneur n8n a échoué !" >&2
+  exit 2
+fi
 
 echo "[startup] Vérification de l'installation de Nginx"
 if [ ! -d /etc/nginx/sites-available ]; then
