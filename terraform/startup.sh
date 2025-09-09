@@ -58,3 +58,5 @@ systemctl status docker --no-pager
 systemctl status nginx --no-pager
 
 echo "Installation et configuration terminées. n8n est accessible via Nginx."
+
+echo "Contenu du script" > /root/startup.sh
