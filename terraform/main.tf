@@ -46,7 +46,7 @@ resource "google_compute_firewall" "n8n_fw" {
 
   allow {
     protocol = "tcp"
-    ports    = ["80", "5678"]
+    ports = ["80", "443", "5678"]
   }
 
   source_ranges = ["0.0.0.0/0"]
