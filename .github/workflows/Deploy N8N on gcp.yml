@@ -12,6 +12,8 @@ jobs:
 
     env:
       GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+      N8N_DOMAIN: ${{ secrets.N8N_DOMAIN }}
+      N8N_SSL_EMAIL: ${{ secrets.N8N_SSL_EMAIL }}
 
     defaults:
       run:

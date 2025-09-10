@@ -2,6 +2,9 @@
 #!/bin/bash
 # filepath: terraform/startup.sh
 
+N8N_DOMAIN="${N8N_DOMAIN:-$(curl -s -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/n8n_domain)}"
+N8N_SSL_EMAIL="${N8N_SSL_EMAIL:-$(curl -s -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/attributes/n8n_ssl_email)}"
+
 # Active le mode debug et redirige toute la sortie vers un log
 set -x
 exec > >(tee -a /var/log/startup-script.log) 2>&1
@@ -61,7 +64,7 @@ echo "[startup] Configuration de Nginx comme reverse proxy pour n8n"
 cat >/etc/nginx/sites-available/n8n <<EOF
 server {
     listen 80 default_server;
-    server_name n8nallanlny.freeddns.org _;
+    server_name $N8N_DOMAIN _;
 
     location / {
         proxy_pass http://localhost:5678;
@@ -79,6 +82,15 @@ rm -f /etc/nginx/sites-enabled/default
 
 echo "[startup] Test de la config Nginx et redémarrage"
 nginx -t && systemctl restart nginx
+
+# --- Ajout automatique du SSL Let's Encrypt ---
+echo "[startup] Installation de Certbot et génération du certificat SSL Let's Encrypt"
+apt-get install -y certbot python3-certbot-nginx
+
+# Obtention du certificat (mode non interactif, accepte les conditions, remplace la config Nginx)
+certbot --nginx --non-interactive --agree-tos --redirect -d $N8N_DOMAIN -m $N8N_SSL_EMAIL || true
+
+echo "[startup] Certificat SSL Let's Encrypt configuré."
 
 echo "[startup] Statut des services pour debug"
 systemctl status docker --no-pager

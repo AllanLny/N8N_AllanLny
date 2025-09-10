@@ -34,6 +34,10 @@ resource "google_compute_instance" "n8n_vm" {
     }
   }
 
+  metadata = {
+    n8n_domain    = var.n8n_domain
+    n8n_ssl_email = var.n8n_ssl_email
+  }
   metadata_startup_script = file("${path.module}/startup.sh")
 
   tags = ["n8n"]
@@ -52,7 +56,3 @@ resource "google_compute_firewall" "n8n_fw" {
   source_ranges = ["0.0.0.0/0"]
   target_tags   = ["n8n"]
 }
-
-variable "project_id" {}
-variable "region"    { default = "europe-west1" }
-variable "zone"      { default = "europe-west1-b" }
